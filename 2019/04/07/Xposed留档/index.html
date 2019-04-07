@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="android,xposed,hook,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="杂毛小鸡" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="简介Xposed是Android常用的java层的hook框架。可以方便的对目标代码进行修改和监控 准备 已经root的android（如果使用VirtualXposed可以不root） 推荐使用VirtualXposed 当然还有Android开发环境（Android studio）">
+<meta name="keywords" content="android,xposed,hook">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Xposed留档">
+<meta property="og:url" content="https://bigkan.github.io/2019/04/07/Xposed留档/index.html">
+<meta property="og:site_name" content="杂毛小鸡">
+<meta property="og:description" content="简介Xposed是Android常用的java层的hook框架。可以方便的对目标代码进行修改和监控 准备 已经root的android（如果使用VirtualXposed可以不root） 推荐使用VirtualXposed 当然还有Android开发环境（Android studio）">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-07T08:18:19.258Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Xposed留档">
+<meta name="twitter:description" content="简介Xposed是Android常用的java层的hook框架。可以方便的对目标代码进行修改和监控 准备 已经root的android（如果使用VirtualXposed可以不root） 推荐使用VirtualXposed 当然还有Android开发环境（Android studio）">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bigkan.github.io/2019/04/07/Xposed留档/">
+
+
+
+
+
+  <title>Xposed留档 | 杂毛小鸡</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">杂毛小鸡</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bigkan.github.io/2019/04/07/Xposed留档/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="杂毛小鸡">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="杂毛小鸡">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Xposed留档</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-07T16:10:58+08:00">
+                2019-04-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>Xposed是Android常用的java层的hook框架。可以方便的对目标代码进行修改和监控</p>
+<h1 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h1><ul>
+<li>已经root的android（如果使用VirtualXposed可以不root）</li>
+<li>推荐使用<a href="https://github.com/android-hacker/VirtualXposed" title="VirtualXposed Github" target="_blank" rel="noopener">VirtualXposed</a></li>
+<li>当然还有Android开发环境（Android studio）<a id="more"></a>
+<h1 id="模块开发入门"><a href="#模块开发入门" class="headerlink" title="模块开发入门"></a>模块开发入门</h1></li>
+</ul>
+<h2 id="添加Xposed-API依赖"><a href="#添加Xposed-API依赖" class="headerlink" title="添加Xposed API依赖"></a>添加Xposed API依赖</h2><blockquote>
+<p>app/build.gradle中添加XposedAPI依赖,使用compileOnly,并同步gradle<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">    <span class="function">implementation <span class="title">fileTree</span><span class="params">(dir: <span class="string">'libs'</span>, include: [<span class="string">'*.jar'</span>])</span></span></span><br><span class="line"><span class="function">    implementation 'com.android.support:appcompat-v7:28.0.0'</span></span><br><span class="line"><span class="function">    testImplementation 'junit:junit:4.12'</span></span><br><span class="line"><span class="function">    androidTestImplementation 'com.android.support.test:runner:1.0.2'</span></span><br><span class="line"><span class="function">    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'</span></span><br><span class="line"><span class="function">    compileOnly 'de.robv.android.xposed:api:82'</span></span><br><span class="line"><span class="function">    compileOnly 'de.robv.android.xposed:api:82:sources'</span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure></p>
+</blockquote>
+<h2 id="配置meta-data"><a href="#配置meta-data" class="headerlink" title="配置meta-data"></a>配置meta-data</h2><blockquote>
+<p>在AndroidManifest.xml中配置Xposed信息</p>
+<ul>
+<li>xposedmodule：表明是Xposed模块</li>
+<li>xposeddescription：Xposed模块描述最好是简单介绍这个模块的功能</li>
+<li>xposedminversion：表示Xposed最低版本<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">manifest</span> <span class="attr">xmlns:android</span>=<span class="string">"http://schemas.android.com/apk/res/android"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">package</span>=<span class="string">"com.example.test"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">application</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:allowBackup</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:icon</span>=<span class="string">"@mipmap/ic_launcher"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:label</span>=<span class="string">"@string/app_name"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:roundIcon</span>=<span class="string">"@mipmap/ic_launcher_round"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:supportsRtl</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:theme</span>=<span class="string">"@style/AppTheme"</span> &gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">meta-data</span></span></span><br><span class="line"><span class="tag">            <span class="attr">android:name</span>=<span class="string">"xposedmodule"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">android:value</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">meta-data</span></span></span><br><span class="line"><span class="tag">            <span class="attr">android:name</span>=<span class="string">"xposeddescription"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">android:value</span>=<span class="string">"test"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">meta-data</span></span></span><br><span class="line"><span class="tag">            <span class="attr">android:name</span>=<span class="string">"xposedminversion"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">android:value</span>=<span class="string">"82"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">application</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">manifest</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</blockquote>
+<h2 id="实现IXposedHookLoadPackage接口"><a href="#实现IXposedHookLoadPackage接口" class="headerlink" title="实现IXposedHookLoadPackage接口"></a>实现IXposedHookLoadPackage接口</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> android.app.Activity;</span><br><span class="line"><span class="keyword">import</span> android.app.AndroidAppHelper;</span><br><span class="line"><span class="keyword">import</span> android.app.Application;</span><br><span class="line"><span class="keyword">import</span> android.os.Bundle;</span><br><span class="line"><span class="keyword">import</span> android.os.Process;</span><br><span class="line"><span class="keyword">import</span> android.util.Log;</span><br><span class="line"><span class="keyword">import</span> android.widget.Toast;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> de.robv.android.xposed.IXposedHookLoadPackage;</span><br><span class="line"><span class="keyword">import</span> de.robv.android.xposed.XC_MethodHook;</span><br><span class="line"><span class="keyword">import</span> de.robv.android.xposed.XposedHelpers;</span><br><span class="line"><span class="keyword">import</span> de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">main</span> <span class="keyword">implements</span> <span class="title">IXposedHookLoadPackage</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleLoadPackage</span><span class="params">(<span class="keyword">final</span> LoadPackageParam lpparam)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="comment">//对Activity类的onCreate进行hook</span></span><br><span class="line">        XposedHelpers.findAndHookMethod(Activity.class, <span class="string">"onCreate"</span>, Bundle.class, <span class="keyword">new</span> XC_MethodHook() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">beforeHookedMethod</span><span class="params">(MethodHookParam param)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">                <span class="comment">//Hook函数执行之前进行操作</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">afterHookedMethod</span><span class="params">(MethodHookParam param)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">                <span class="comment">//Hook函数执行之后操作</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="配置assets-xposed-init"><a href="#配置assets-xposed-init" class="headerlink" title="配置assets/xposed_init"></a>配置assets/xposed_init</h2><blockquote>
+<p>鼠标右击模块-&gt;New-&gt;Folder-&gt;Assets Folder即可创建。在assets目录中创建名称为xposed_init的文件，并写入刚刚创建的Xposed模块入口类的全限定类名com.example.test.main。</p>
+</blockquote>
+<h2 id="安装并使用"><a href="#安装并使用" class="headerlink" title="安装并使用"></a>安装并使用</h2><ul>
+<li>setting-&gt;Build,Execution,Deployment-&gt;Instant Run把钩取消掉</li>
+<li>安装apk</li>
+<li>xposed里勾选模块apk并重启设备</li>
+<li>现在就已经完成</li>
+</ul>
+<h1 id="API介绍"><a href="#API介绍" class="headerlink" title="API介绍"></a>API介绍</h1><blockquote>
+<p>详细API介绍<a href="http://api.xposed.info/reference/packages.html" target="_blank" rel="noopener">框架API详细介绍</a><br>也可以在AndroidStudio中通过<code>ctrl+鼠标左键</code>跳转到相应的源码进行查看，有时候这样会更加方便</p>
+</blockquote>
+<h2 id="IXposedHookLoadPackage"><a href="#IXposedHookLoadPackage" class="headerlink" title="IXposedHookLoadPackage"></a>IXposedHookLoadPackage</h2><blockquote>
+<p>这是Xposed的回调接口，Xposed会自动注册这个接口的实现类(在assets/xposed_init文件中配置)为插件代码的执行入口。这是代码注入的入口。每一个DVM进程启动时，都会调用其实现类的handleLoadPackage(LoadPackageParam)方法，并将当前进程的应用程序信息作为参数传递给自定义代码，从而实现代码注入。插件注入的任何功能实现都是从这里开始执行，而不是从插件应用的Application#onCreate()方法开始的。</p>
+</blockquote>
+<h2 id="XC-LoadPackage-LoadPackageParam"><a href="#XC-LoadPackage-LoadPackageParam" class="headerlink" title="XC_LoadPackage.LoadPackageParam"></a>XC_LoadPackage.LoadPackageParam</h2><blockquote>
+<p>封装了正在加载的进程的应用信息。有下面几个变量</p>
+</blockquote>
+<ul>
+<li>String packageName：The name of the package being loaded.被加载的包名</li>
+<li>String processName：The process in which the package is executed.</li>
+<li>ClassLoader classLoader：The ClassLoader used for this package.</li>
+<li>ApplicationInfo appInfo：More information about the application being loaded</li>
+<li>bool isFirstApplication：if this is the first (and main) application for this process.<h2 id="XC-MethodHook"><a href="#XC-MethodHook" class="headerlink" title="XC_MethodHook"></a>XC_MethodHook</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** 该方法中的代码会在目标方法被调用前执行 **/</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">beforeHookedMethod</span><span class="params">(MethodHookParam param)</span> <span class="keyword">throws</span> Throwable </span>&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/** 该方法中的代码会在目标方法被调用后执行 **/</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">afterHookedMethod</span><span class="params">(MethodHookParam param)</span> <span class="keyword">throws</span> Throwable </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="MethodHookParam"><a href="#MethodHookParam" class="headerlink" title="MethodHookParam"></a>MethodHookParam</h2><blockquote>
+<p>XC_MethodHook的参数  </p>
+</blockquote>
+<ul>
+<li>args：方法的ava方法（Java构造器）参数列表</li>
+<li>method：目标方法，Java方法（Java构造器）对象</li>
+<li>getResult()：获得Java方法的返回值；一般在afterHookedMethod中使用</li>
+<li>setResult(Object result)：修改方法的返回值<h2 id="XposedHelpers类"><a href="#XposedHelpers类" class="headerlink" title="XposedHelpers类"></a>XposedHelpers类</h2><blockquote>
+<p>源码注释：Helpers that simplify hooking and calling methods/constructors, getting and settings fields。可以获取类，hook和调用方法，设置和获取属性值。下面是常用的4个方法，前两个用来hook java方法，后两个用来hook构造函数</p>
+</blockquote>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> XC_MethodHook.<span class="function">Unhook <span class="title">findAndHookMethod</span><span class="params">(Class&lt;?&gt; clazz, String methodName, Object... parameterTypesAndCallback)</span></span>;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> XC_MethodHook.<span class="function">Unhook <span class="title">findAndHookMethod</span><span class="params">(String className, ClassLoader classLoader, String methodName, Object... parameterTypesAndCallback)</span></span>;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> XC_MethodHook.<span class="function">Unhook <span class="title">findAndHookConstructor</span><span class="params">(Class&lt;?&gt; clazz, Object... parameterTypesAndCallback)</span></span>;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> XC_MethodHook.<span class="function">Unhook <span class="title">findAndHookConstructor</span><span class="params">(String className, ClassLoader classLoader, Object... parameterTypesAndCallback)</span></span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>clazz：目标方法的类</li>
+<li>className：全限定类名</li>
+<li>methodName: 目标方法名</li>
+<li>Object…：参数列表</li>
+<li>classLoader：指定类加载器，期望从中查找名称为className的类 </li>
+<li>parameterTypesAndCallback：回调函数主要实现beforeHookedMethod和afterHookedMethod<h1 id="hook-Multidex-和动态加载的解决方法"><a href="#hook-Multidex-和动态加载的解决方法" class="headerlink" title="hook Multidex 和动态加载的解决方法"></a>hook Multidex 和动态加载的解决方法</h1></li>
+<li>1.首先HookApplication.class的attach。</li>
+<li>2.然后Hook目标方法。<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">findAndHookMethod(Application.class, <span class="string">"attach"</span>, Context.class, <span class="keyword">new</span> XC_MethodHook() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">afterHookedMethod</span><span class="params">(MethodHookParam param)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        findAndHookMethod(<span class="string">"com.example.test.xxxx"</span>, lpparam.classLoader, <span class="string">"methodName"</span>, Context.class, <span class="keyword">new</span> XC_MethodHook() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">afterHookedMethod</span><span class="params">(MethodHookParam param)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">            XposedBridge.log(<span class="string">"hook success"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h1 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h1><ul>
+<li><a href="https://mp.weixin.qq.com/s/4-6fNOLEZbu80JVSgHcPSg" title="Xposed框架" target="_blank" rel="noopener">微信公众号Xposed框架</a></li>
+<li><a href="https://github.com/rovo89/XposedBridge/wiki/" title="Xposed官方教程" target="_blank" rel="noopener">Xposed官方教程</a></li>
+<li><a href="http://api.xposed.info/reference/packages.html" target="_blank" rel="noopener">框架API详细介绍</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/android/" rel="tag"># android</a>
+          
+            <a href="/tags/xposed/" rel="tag"># xposed</a>
+          
+            <a href="/tags/hook/" rel="tag"># hook</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">杂毛小鸡</p>
+              <p class="site-description motion-element" itemprop="description">自由民主</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#简介"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#准备"><span class="nav-number">2.</span> <span class="nav-text">准备</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#模块开发入门"><span class="nav-number">3.</span> <span class="nav-text">模块开发入门</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#添加Xposed-API依赖"><span class="nav-number">3.1.</span> <span class="nav-text">添加Xposed API依赖</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置meta-data"><span class="nav-number">3.2.</span> <span class="nav-text">配置meta-data</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现IXposedHookLoadPackage接口"><span class="nav-number">3.3.</span> <span class="nav-text">实现IXposedHookLoadPackage接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置assets-xposed-init"><span class="nav-number">3.4.</span> <span class="nav-text">配置assets/xposed_init</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装并使用"><span class="nav-number">3.5.</span> <span class="nav-text">安装并使用</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#API介绍"><span class="nav-number">4.</span> <span class="nav-text">API介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#IXposedHookLoadPackage"><span class="nav-number">4.1.</span> <span class="nav-text">IXposedHookLoadPackage</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#XC-LoadPackage-LoadPackageParam"><span class="nav-number">4.2.</span> <span class="nav-text">XC_LoadPackage.LoadPackageParam</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#XC-MethodHook"><span class="nav-number">4.3.</span> <span class="nav-text">XC_MethodHook</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MethodHookParam"><span class="nav-number">4.4.</span> <span class="nav-text">MethodHookParam</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#XposedHelpers类"><span class="nav-number">4.5.</span> <span class="nav-text">XposedHelpers类</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#hook-Multidex-和动态加载的解决方法"><span class="nav-number">5.</span> <span class="nav-text">hook Multidex 和动态加载的解决方法</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考链接"><span class="nav-number">6.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">杂毛小鸡</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
