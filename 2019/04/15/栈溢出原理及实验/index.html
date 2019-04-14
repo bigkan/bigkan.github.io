@@ -92,12 +92,12 @@
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/函数调用原理.png">
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/栈帧布局.jpg">
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/输入8个q之后的栈.png">
-<meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/FindEIP.png">
+<meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/findEIP.png">
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/jmpesp.png">
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/ShellCodeAddress.png">
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/calc.png">
 <meta property="og:image" content="https://bigkan.github.io/2019/04/15/栈溢出原理及实验/telnet.png">
-<meta property="og:updated_time" content="2019-04-14T16:48:42.461Z">
+<meta property="og:updated_time" content="2019-04-14T17:15:07.347Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="栈溢出原理及实验">
 <meta name="twitter:description" content="简介 在看了《0day安全：软件漏洞分析技术》的前几章和《Exploit编写系列教程》的第一章之后，简单记录一下自己遇到的问题，一些资源和简单命令。下面主要从3个方面出发记录。1.栈溢出的原理及简单demo实验。2.具体软件栈溢出的利用（不是挖掘栈溢出漏洞，是已经知道后怎么利用）。3.Metasploit的简单使用。">
@@ -377,7 +377,38 @@
 </ol>
 </blockquote>
 <p>下图为main调用func_add时栈的状态示意图<br><img src="/2019/04/15/栈溢出原理及实验/函数调用原理.png" alt="函数调用原理"></p>
-<h1 id="栈溢出简单Demo"><a href="#栈溢出简单Demo" class="headerlink" title="栈溢出简单Demo"></a>栈溢出简单Demo</h1><p>实验环境<br>|  | 推荐使用的环境 | 备注 |<br>| —— | —— | —— |<br>| 操作系统 | win32Xp SP2 | 我是在WinXp sp3进行实验的 |<br>| 编译器 | VC6.0 | 其他编译器需要重新调试 |<br>| 编译选项 | 默认编译选项 | VS2003和VS2005中的GS编译选项会使栈溢出失败 |<br>| build版本 | debug | 使用release版本需要重新调试 |</p>
+<h1 id="栈溢出简单Demo"><a href="#栈溢出简单Demo" class="headerlink" title="栈溢出简单Demo"></a>栈溢出简单Demo</h1><p>实验环境</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>推荐使用的环境</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>操作系统</td>
+<td>win32Xp SP2</td>
+<td>我是在WinXp sp3进行实验的</td>
+</tr>
+<tr>
+<td>编译器</td>
+<td>VC6.0</td>
+<td>其他编译器需要重新调试</td>
+</tr>
+<tr>
+<td>编译选项</td>
+<td>默认编译选项</td>
+<td>VS2003和VS2005中的GS编译选项会使栈溢出失败</td>
+</tr>
+<tr>
+<td>build版本</td>
+<td>debug</td>
+<td>使用release版本需要重新调试</td>
+</tr>
+</tbody>
+</table>
 <p>实验代码<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// stack_overflow_var.exe</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PASSWORD <span class="meta-string">"1234567"</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">verify_password</span> <span class="params">(<span class="keyword">char</span> *password)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> authenticated;</span><br><span class="line">	<span class="keyword">char</span> buffer[<span class="number">8</span>];<span class="comment">// add local buff</span></span><br><span class="line">	authenticated=<span class="built_in">strcmp</span>(password,PASSWORD);</span><br><span class="line">	<span class="built_in">strcpy</span>(buffer,password);<span class="comment">//over flowed here!	</span></span><br><span class="line">	<span class="keyword">return</span> authenticated;</span><br><span class="line">&#125;</span><br><span class="line">main()</span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">int</span> valid_flag=<span class="number">0</span>;</span><br><span class="line">	<span class="keyword">char</span> password[<span class="number">1024</span>];</span><br><span class="line">	<span class="keyword">while</span>(<span class="number">1</span>)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">"please input password:       "</span>);</span><br><span class="line">		</span><br><span class="line">		<span class="built_in">scanf</span>(<span class="string">"%s"</span>,password);</span><br><span class="line">		</span><br><span class="line">		valid_flag = verify_password(password);</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">if</span>(valid_flag)</span><br><span class="line">		&#123;</span><br><span class="line">			<span class="built_in">printf</span>(<span class="string">"incorrect password!\n\n"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">		&#123;</span><br><span class="line">			<span class="built_in">printf</span>(<span class="string">"Congratulation! You have passed the verification!\n"</span>);</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <blockquote>
 <p>可以看到输入password时并没有限制长度，但是在verify_password中复制password到buff时，buff只有8个字节的长度，可能会产生溢出。下图是当我们输入7个q时栈的状态。</p>
@@ -393,7 +424,7 @@
 <h2 id="定位到溢出点"><a href="#定位到溢出点" class="headerlink" title="定位到溢出点"></a>定位到溢出点</h2><blockquote>
 <p>根据文章我们知道crash.m3u文件的25000到30000之间的某个位置。所以就用 <strong>pattern.py 5000</strong>（msf中pattern_create.rb和pattern_offset.rb可以做相同的事情）来生成5000字符长度的字符串，方便我们根据崩溃时的提示定位到EIP（就是前面提到的返回地址）。下图为崩溃时的提示0x366a4235。现在就可以用这个去查偏移，就能确定是哪几个字节把EIP给覆盖了。</p>
 </blockquote>
-<p><img src="/2019/04/15/栈溢出原理及实验/FindEIP.png" alt="崩溃时的提示"><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(base) C:\workplace\tools&gt;python pattern.py 0x366a4235</span><br><span class="line">Pattern 0x366a4235 first occurrence at position 1067 in pattern.</span><br></pre></td></tr></table></figure></p>
+<p><img src="/2019/04/15/栈溢出原理及实验/findEIP.png" alt="崩溃时的提示"><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(base) C:\workplace\tools&gt;python pattern.py 0x366a4235</span><br><span class="line">Pattern 0x366a4235 first occurrence at position 1067 in pattern.</span><br></pre></td></tr></table></figure></p>
 <blockquote>
 <p>查询偏移可以知道偏移为1067个字节。所以前面需要26067个字节去填充（一般使用A字符去填充，当然也可以是随意的），之后的4个字节会将返回地址给覆盖了。现在用’BBBB’来代替这个4个字节去测试。可以看到返回的报错改成了0x42424242(就是ascii的’BBBB’)。</p>
 </blockquote>
