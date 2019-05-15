@@ -1,4 +1,17 @@
-<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 杂毛小鸡</title><meta name="description" content="自由民主"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon2.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="search" type="application/opensearchdescription+xml" href="https://bigkan.github.io/atom.xml" title="杂毛小鸡"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon2.png" alt="logo"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link active">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/bigkan" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><main class="container"><ul class="home post-list"><li class="post-list-item"><article class="post-block"><h2 class="post-title"><a href="/2019/04/24/利用SEH的栈溢出/" class="post-title-link">利用SEH的栈溢出</a></h2><div class="post-info">Apr 24, 2019</div><div class="post-content"><h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
+<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 杂毛小鸡</title><meta name="description" content="自由民主"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon2.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="search" type="application/opensearchdescription+xml" href="https://bigkan.github.io/atom.xml" title="杂毛小鸡"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon2.png" alt="logo"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link active">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/bigkan" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><main class="container"><ul class="home post-list"><li class="post-list-item"><article class="post-block"><h2 class="post-title"><a href="/2019/05/15/绕过GS和SafeSEH保护/" class="post-title-link">绕过GS和SafeSEH保护</a></h2><div class="post-info">May 15, 2019</div><div class="post-content"><h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
+<p>在看了《0day安全》的<strong>栈中的守护天使：GS</strong>和<strong>亡羊补牢：SafeSEH</strong>，并将里面的实验做了一遍之后，总结一下遇到的坑和一些失败的经验。文章将从下面几点进行讲述：</p>
+</blockquote>
+<ul>
+<li><ol>
+<li>如何使用VS2019编译能在windows XP SP3上运行的程序。如何对程序和电脑进行GS，SafeSEH，DEP进行设置</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>GS的原理和绕过方法（实验失败）</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>SafeSEH的原理和绕过方法</li></ol></li></ul></div><a href="/2019/05/15/绕过GS和SafeSEH保护/" class="read-more">...more</a></article></li><li class="post-list-item"><article class="post-block"><h2 class="post-title"><a href="/2019/04/24/利用SEH的栈溢出/" class="post-title-link">利用SEH的栈溢出</a></h2><div class="post-info">Apr 24, 2019</div><div class="post-content"><h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
 <p>在看了《Exploit编写系列教程》的第三章和几篇SEH的博客后稍微记录一下。最后虽然整个分析的流程和教程的一模一样，但是用msf生成的payload并没有成功弹出计算器。我还是个新手小白所以虽然看了很久的教程但还是有一些不是很清楚。下面从下面三个部分记录一下</p>
 <ul>
 <li>1.SEH的概念和一些数据结构</li>

