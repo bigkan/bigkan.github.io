@@ -2,7 +2,7 @@
 <p>这篇博客主要记录IAT Hook的基本原理和简单实现。</p>
 <ul>
 <li>1.IAT Hook的原理</li>
-<li>2.AT HOOK的实现<a id="more"></a>
+<li>2.IAT HOOK的实现<a id="more"></a>
 </li>
 </ul>
 </blockquote>
@@ -23,5 +23,5 @@
 <li>IATHook的优点：简单容易实现，可以对函数调用进行监控</li>
 <li>IATHook的缺点：只能Hook IAT表中存在的函数。如果程序使用Loadlibrary和GetProcAddress来调用函数将失效。无法Hook没有导出的函数，也不能对任意的位置进行Hook</li>
 </ul>
-<p>代码链接：<a href="https://github.com/bigkan/BlogDemo" target="_blank" rel="noopener">https://github.com/bigkan/BlogDemo</a></p>
-</div></article></div></main><footer><div class="paginator"><a href="/2020/07/24/内存加载运行EXE/" class="next">NEXT</a></div><div class="copyright"><p>© 2019 - 2020 <a href="https://bigkan.github.io">杂毛小鸡</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
+<p>代码链接：<a href="https://github.com/bigkan/BlogDemo/tree/master/IATHookDemo" target="_blank" rel="noopener">https://github.com/bigkan/BlogDemo/tree/master/IATHookDemo</a></p>
+</div></article></div></main><footer><div class="paginator"><a href="/2020/08/04/inlineHook/" class="prev">PREV</a><a href="/2020/07/24/内存加载运行EXE/" class="next">NEXT</a></div><div class="copyright"><p>© 2019 - 2020 <a href="https://bigkan.github.io">杂毛小鸡</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> inlineHook · 杂毛小鸡</title><meta name="description" content="inlineHook - 杂毛小鸡"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon2.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="search" type="application/opensearchdescription+xml" href="https://bigkan.github.io/atom.xml" title="杂毛小鸡"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon2.png" alt="logo"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/bigkan" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><main class="container"><div class="post"><article class="post-block"><h1 class="post-title">inlineHook</h1><div class="post-info">Aug 4, 2020</div><div class="post-content"><h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
+<p>IAT Hook存在的缺陷，所以去学习了inlineHook。inlineHook可以在任意的位置进行，这里就根据原理实现了低配版的inlineHook。</p>
+<ul>
+<li>1.inline Hook的原理</li>
+<li>2.inline HooK的实现<a id="more"></a>
+</li>
+</ul>
+</blockquote>
+<h1 id="inline-Hook的原理"><a href="#inline-Hook的原理" class="headerlink" title="inline Hook的原理"></a>inline Hook的原理</h1><p>inline Hook的原理还是比较容易理解的，就是在需要hook的地址(比如MessageBox函数)将内容机器码替换成跳转指令(jmp MyMessage)，并将原来的指令保存用于之后的恢复。替换完成以后，调用MessageBox就会跳转执行MyMessage。   </p>
+<p><img src="/2020/08/04/inlineHook/inlineHook之后.png" alt="inlineHook MessageBoxW之后"></p>
+<h2 id="MyMessage逻辑"><a href="#MyMessage逻辑" class="headerlink" title="MyMessage逻辑"></a>MyMessage逻辑</h2><p>一般用于处理Hook的MyMessage会将原来的MessageBox上下文环境保存（使用pushad pushaf），然后执行自己的逻辑，比如对某些参数进行检查等等。最后恢复原来的上下文环境（popad popad），并先执行上面保存的指令，再跳转到原来函数被覆盖指令之后(这里需要跳转执行push 0fffffffh)。这里为了偷懒，在执行之前直接恢复了指令再调用MessageBox(其实是最后的跳转偏移不好算所以没有写，有懂的求指导)。</p>
+<p><img src="/2020/08/04/inlineHook/MyMessage.png" alt="inlineHook MessageBoxW之后"></p>
+<h1 id="inline-Hook的实现"><a href="#inline-Hook的实现" class="headerlink" title="inline Hook的实现"></a>inline Hook的实现</h1><p>inline Hook代码的实现主要是在设置inlineHook函数中</p>
+<h2 id="inlineHook"><a href="#inlineHook" class="headerlink" title="inlineHook"></a>inlineHook</h2><p>inlineHook的处理主要包括4个步骤</p>
+<ul>
+<li>1.获得MessageBoxW的地址</li>
+<li>2.计算偏移 JmpCode=MyMessage - MessageBoxW - 5</li>
+<li>3.读取MessageBoxW前5个字节保存到__OldCode中</li>
+<li>4.将NewCode写入到MessageBoxW的开头</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">InlineHook</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="comment">//获得MessageBoxW的地址</span></span><br><span class="line">	HMODULE hModule_User32 = LoadLibrary(<span class="string">L"user32.dll"</span>);</span><br><span class="line">	__MessageBoxAddress = GetProcAddress(hModule_User32, <span class="string">"MessageBoxW"</span>);</span><br><span class="line">	<span class="comment">//计算偏移=MyMessage - MessageBoxW - 5 </span></span><br><span class="line">	DWORD JmpCode = (DWORD)MyMessageBox - (DWORD)__MessageBoxAddress - <span class="number">5</span>;</span><br><span class="line">	<span class="comment">//读取MessageBoxW前5个字节保存到__OldCode中</span></span><br><span class="line">	<span class="keyword">if</span> (ReadProcessMemory(INVALID_HANDLE_VALUE, __MessageBoxAddress, __OldCode, <span class="number">5</span>, <span class="literal">NULL</span>)==<span class="number">0</span>)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">"ReadProcessMemory error\n"</span>);</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">//将NewCode写入到MessageBoxW的开头</span></span><br><span class="line">	*(DWORD*)(__NewCode + <span class="number">1</span>) = JmpCode;</span><br><span class="line">	DWORD dwOldProtect;</span><br><span class="line">	VirtualProtect(__MessageBoxAddress, <span class="number">5</span>, PAGE_EXECUTE_READWRITE, &amp;dwOldProtect);</span><br><span class="line">	WriteProcessMemory(INVALID_HANDLE_VALUE, __MessageBoxAddress, __NewCode, <span class="number">5</span>,<span class="literal">NULL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="MyMessage"><a href="#MyMessage" class="headerlink" title="MyMessage"></a>MyMessage</h2><ul>
+<li>恢复MessageBoxW的指令</li>
+<li>调用MessageBoxW</li>
+</ul>
+<pre><code class="c"><span class="function"><span class="keyword">int</span> WINAPI <span class="title">MyMessageBox</span><span class="params">(HWND hWnd,LPCTSTR lpText,LPCTSTR lpCaption,UINT uType)</span></span>
+<span class="function"></span>{
+    <span class="built_in">printf</span>(<span class="string">"MessageBoxW 已经被Hook\n"</span>);
+    WriteProcessMemory(INVALID_HANDLE_VALUE, __MessageBoxAddress, __OldCode, <span class="number">5</span>, <span class="literal">NULL</span>);
+    <span class="keyword">int</span> ret = MessageBoxW(<span class="literal">NULL</span>, <span class="string">L"已经被Hook"</span>, <span class="string">L"inlineHook"</span>, MB_OK);
+    <span class="keyword">return</span> ret;
+}
+</code></pre>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>参考书籍 《加密与解密第4版》<br>代码参考  <a href="https://github.com/bigkan/BlogDemo/tree/master/inlineHook" target="_blank" rel="noopener">https://github.com/bigkan/BlogDemo/tree/master/inlineHook</a></p>
+</div></article></div></main><footer><div class="paginator"><a href="/2020/08/03/IAT-Hook/" class="next">NEXT</a></div><div class="copyright"><p>© 2019 - 2020 <a href="https://bigkan.github.io">杂毛小鸡</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
